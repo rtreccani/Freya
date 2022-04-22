@@ -26,7 +26,10 @@ int main(){
     cpu cpu(rom);
     do{
         printf("PC: 0x%04X\n", cpu.reg.PC);
-        getchar();
+        char C = getchar();
+        if(C == 'r'){
+            cpu.dump_registers();
+        }
     } while(cpu.execute_opcode() >= 0);
     cpu.dump_registers();
 

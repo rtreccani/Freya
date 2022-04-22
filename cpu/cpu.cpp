@@ -5,11 +5,15 @@
 #include <stdio.h>
 #include <byteswap.h>
 
-void jump(uint16_t address, registers_t* p_reg, reg_ind_t ind){
+void jump(uint16_t address, registers_t* p_reg, uint8_t* p_ram, reg_ind_t ind){
     p_reg->PC = address;
 }
 
-void XOR(uint16_t operand, registers_t* p_reg, reg_ind_t ind){
+void LD_A_HL_DEC(uint16_t operand, registers_t* p_reg, uint8_t* p_ram, reg_ind_t ind){
+    p_ram[(p_reg->HL - MEM_RAM_START)] = p_reg->A;
+}
+
+void XOR(uint16_t operand, registers_t* p_reg, uint8_t* p_ram, reg_ind_t ind){
     switch(ind){
         case REG_IND_A:
             p_reg->A = p_reg->A ^ p_reg->A;
@@ -41,11 +45,63 @@ void XOR(uint16_t operand, registers_t* p_reg, reg_ind_t ind){
     p_reg->F.bits.z = (p_reg->A == 0) ? true : false;
 }
 
-void LDHL16(uint16_t operand, registers_t* p_reg, reg_ind_t ind){
+void DEC(uint16_t operand, registers_t* p_reg, uint8_t* p_ram, reg_ind_t ind){
+    switch(ind){
+        case REG_IND_A:
+            p_reg->A--;
+            p_reg->F.bits.z = (p_reg->A == 0) ? true : false;
+            p_reg->F.bits.h = ((p_reg->A & 0x0F) == 0x0F);
+            break;
+        case REG_IND_B:
+            p_reg->B--;
+            p_reg->F.bits.z = (p_reg->B == 0) ? true : false;
+            p_reg->F.bits.h = ((p_reg->B & 0x0F) == 0x0F);
+            break;
+        case REG_IND_C:
+            p_reg->C--;
+            p_reg->F.bits.z = (p_reg->C == 0) ? true : false;
+            p_reg->F.bits.h = ((p_reg->C & 0x0F) == 0x0F);
+            break;
+        case REG_IND_D:
+            p_reg->D--;
+            p_reg->F.bits.z = (p_reg->D == 0) ? true : false;
+            p_reg->F.bits.h = ((p_reg->D & 0x0F) == 0x0F);
+            break;
+        case REG_IND_E:
+            p_reg->E--;
+            p_reg->F.bits.z = (p_reg->E == 0) ? true : false;
+            p_reg->F.bits.h = ((p_reg->E & 0x0F) == 0x0F);
+            break;
+        case REG_IND_H:
+            p_reg->H--;
+            p_reg->F.bits.z = (p_reg->H == 0) ? true : false;
+            p_reg->F.bits.h = ((p_reg->H & 0x0F) == 0x0F);
+            break;
+        case REG_IND_L:
+            p_reg->L--;
+            p_reg->F.bits.z = (p_reg->L == 0) ? true : false;
+            p_reg->F.bits.h = ((p_reg->L & 0x0F) == 0x0F);
+            break;
+        case REG_IND_HL:
+            p_reg->HL--;
+            p_reg->F.bits.z = (p_reg->HL == 0) ? true : false;
+            p_reg->F.bits.h = ((p_reg->HL & 0x0F) == 0x0F);
+            break;
+        case REG_IND_MEM_HL:
+            p_ram[(p_reg->HL - MEM_RAM_START)]--;
+            p_reg->F.bits.z = (p_ram[(p_reg->HL - MEM_RAM_START)] == 0) ? true : false;
+            p_reg->F.bits.h = ((p_ram[(p_reg->HL - MEM_RAM_START)] & 0x0F) == 0x0F);
+    }
+
+}
+
+
+
+void LDHL16(uint16_t operand, registers_t* p_reg, uint8_t* p_ram, reg_ind_t ind){
     p_reg->HL = operand;
 }
 
-void LD8(uint16_t operand, registers_t* p_reg, reg_ind_t ind){
+void LD8(uint16_t operand, registers_t* p_reg, uint8_t* p_ram, reg_ind_t ind){
     switch(ind){
         case REG_IND_A:
             p_reg->A = (operand & 0xFF);
@@ -82,15 +138,15 @@ opcode opcodes[256] = {
     {"LD (BC), A",        0, REG_IND_NONE, NULL},
     {"INC BC",            0, REG_IND_NONE, NULL},
     {"INC B",             0, REG_IND_NONE, NULL},
-    {"DEC B",             0, REG_IND_NONE, NULL},
+    {"DEC B",             0, REG_IND_B   , DEC},
     {"LD B,8b",           1, REG_IND_B   , LD8 },
     {"RLCA",              0, REG_IND_NONE, NULL},
     {"LD 16b,SP",         2, REG_IND_NONE, NULL},
     {"ADD HL,BC",         0, REG_IND_NONE, NULL},
     {"LD A,(BC)",         0, REG_IND_NONE, NULL},
-    {"DEC BC",            0, REG_IND_NONE, NULL},
+    {"DEC BC",            0, REG_IND_BC  , DEC},
     {"INC C",             0, REG_IND_NONE, NULL},
-    {"DEC C",             0, REG_IND_NONE, NULL},
+    {"DEC C",             0, REG_IND_C   , NULL},
     {"LD C,8b",           1, REG_IND_C   , LD8},
     {"RRCA",              0, REG_IND_NONE, NULL}, //0x10
     {"STOP 0",            1, REG_IND_NONE, NULL},
@@ -98,15 +154,15 @@ opcode opcodes[256] = {
     {"LD DE, A",          0, REG_IND_NONE, NULL},
     {"INC DE",            0, REG_IND_NONE, NULL},
     {"INC D",             0, REG_IND_NONE, NULL},
-    {"DEC D",             0, REG_IND_NONE, NULL},
+    {"DEC D",             0, REG_IND_D   , DEC},
     {"LD D 8b",           1, REG_IND_NONE, NULL},
     {"RLA",               0, REG_IND_NONE, NULL},
     {"JR 8b",             1, REG_IND_NONE, NULL},
     {"ADD HL,DE",         0, REG_IND_NONE, NULL},
     {"LD A, DE",          0, REG_IND_NONE, NULL},
-    {"DEC DE",            0, REG_IND_NONE, NULL},
+    {"DEC DE",            0, REG_IND_DE  , DEC},
     {"INC E",             0, REG_IND_NONE, NULL},
-    {"DEC E",             0, REG_IND_NONE, NULL},
+    {"DEC E",             0, REG_IND_E   , DEC},
     {"LD E,8b",           1, REG_IND_NONE, NULL},
     {"RRA",               0, REG_IND_NONE, NULL},
     {"JR NZ,8b",          1, REG_IND_NONE, NULL}, //0x20
@@ -114,23 +170,23 @@ opcode opcodes[256] = {
     {"LD HL+,A",          0, REG_IND_NONE, NULL},
     {"INC HL",            0, REG_IND_NONE, NULL},
     {"INC H",             0, REG_IND_NONE, NULL},
-    {"DEC H",             0, REG_IND_NONE, NULL},
+    {"DEC H",             0, REG_IND_H   , DEC},
     {"LD H,8b",           1, REG_IND_NONE, NULL},
     {"DAA",               0, REG_IND_NONE, NULL},
     {"JR Z,8b",           1, REG_IND_NONE, NULL},
     {"ADD HL,HL",         0, REG_IND_NONE, NULL},
     {"LD A,HL+",          0, REG_IND_NONE, NULL},
-    {"DEC HL",            0, REG_IND_NONE, NULL},
+    {"DEC HL",            0, REG_IND_HL  , DEC}, //indirected but register-local
     {"INC L",             0, REG_IND_NONE, NULL},
-    {"DEC L",             0, REG_IND_NONE, NULL},
+    {"DEC L",             0, REG_IND_L   , DEC},
     {"LD L,8b",           1, REG_IND_NONE, NULL},
     {"CPL",               0, REG_IND_NONE, NULL},
     {"JR NC,8b",          1, REG_IND_NONE, NULL}, //0x30
     {"LD SP,16b",         2, REG_IND_NONE, NULL},
-    {"LD HL-,A",          0, REG_IND_NONE, NULL},
+    {"LD HL-,A",          0, REG_IND_A   , LD_A_HL_DEC},
     {"INC SP",            0, REG_IND_NONE, NULL},
     {"INC HL",            0, REG_IND_NONE, NULL},
-    {"DEC HL",            0, REG_IND_NONE, NULL},
+    {"DEC(HL)",            0, REG_IND_MEM_HL, NULL}, //indirected and RAM
     {"LD HL,8b",          1, REG_IND_NONE, NULL},
     {"SCF",               0, REG_IND_NONE, NULL},
     {"JR C,8b",           1, REG_IND_NONE, NULL},
@@ -320,7 +376,7 @@ int cpu::execute_opcode(){
         printf("instruction not implemented :(\n");
     } else{
         reg.PC += ctx.operand_length + 1;
-        ctx.opcode_pointer(operand, &reg, ctx.reg_ind);
+        ctx.opcode_pointer(operand, &reg, ram, ctx.reg_ind);
         return 0;
     }
     return -1;

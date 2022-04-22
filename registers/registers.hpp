@@ -26,6 +26,7 @@ typedef enum{
     REG_IND_DE,
     REG_IND_HL,
     REG_IND_SP,
+    REG_IND_MEM_HL,
     REG_IND_NONE,
 } reg_ind_t;
 
