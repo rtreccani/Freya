@@ -19,22 +19,22 @@ typedef union {
 } flag_reg_t;
 
 typedef enum{
-    REG_IND_A,
-    REG_IND_B,
-    REG_IND_C,
-    REG_IND_D,
-    REG_IND_E,
-    REG_IND_F,
-    REG_IND_H,
-    REG_IND_L,
-    REG_IND_BC,
-    REG_IND_DE,
-    REG_IND_HL,
-    REG_IND_SP,
-    REG_IND_PC,
-    REG_IND_MEM_HL,
-    REG_IND_PC_NEXT,
-    REG_IND_NONE,
+    IND_A,
+    IND_B,
+    IND_C,
+    IND_D,
+    IND_E,
+    IND_F,
+    IND_H,
+    IND_L,
+    IND_BC,
+    IND_DE,
+    IND_HL,
+    IND_SP,
+    IND_PC,
+    IND_MEM_HL,
+    IND_PC_NEXT,
+    IND_NONE,
 } reg_ind_t;
 
 class registers{
@@ -73,6 +73,8 @@ class registers{
         void write(reg_ind_t, uint16_t);
         void PC_step();
         uint16_t PC_next;
+        bool interrupts_enabled;
+        bool interrupts_disabled_request;
 };
 
 typedef struct{
