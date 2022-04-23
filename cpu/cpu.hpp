@@ -12,7 +12,6 @@ struct opcode{
     reg_ind_t reg_ind;
     reg_ind_t reg_ind_two;
     void(* opcode_pointer)(uint16_t, registers*, uint8_t*, reg_ind_t, reg_ind_t);
-    // int ticks;
 };
 
 class cpu{
@@ -24,6 +23,8 @@ class cpu{
         int execute_opcode();
         void jump(int);
         void dump_registers();
+        uint16_t get_operand(opcode);
+        uint64_t ticks;
 };
 
 

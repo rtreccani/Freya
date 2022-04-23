@@ -295,7 +295,6 @@ void RET(uint16_t operand, registers* p_reg, uint8_t* p_ram, reg_ind_t ind, reg_
 void NOP(uint16_t operand, registers* p_reg, uint8_t* p_ram, reg_ind_t ind, reg_ind_t ind2){
 }
 
-
 opcode opcodes[256] = {
     {"NOP",               0, IND_NONE      , IND_NONE  , NOP}, //0x00
     {"LD BC,16b",         2, IND_BC        , IND_NONE  , LD16},
@@ -339,7 +338,7 @@ opcode opcodes[256] = {
     {"DAA",               0, IND_NONE      , IND_NONE  , NULL},
     {"JR Z,8b",           1, IND_NONE      , IND_NONE  , NULL},
     {"ADD HL,HL",         0, IND_HL        , IND_HL    , ADD16},
-    {"LD A,HL+",          0, IND_A   , IND_NONE  ,         LD_HL_INC},
+    {"LD A,HL+",          0, IND_A         , IND_NONE  , LD_HL_INC},
     {"DEC HL",            0, IND_HL        , IND_NONE  , DEC}, //indirected but register-local
     {"INC L",             0, IND_L         , IND_NONE  , INC},
     {"DEC L",             0, IND_L         , IND_NONE  , DEC},
@@ -569,48 +568,40 @@ uint16_t find_16_from_8(uint8_t* array, int ptr){
     return combined;
 }
 
-
+uint16_t cpu::get_operand(opcode ctx){
+    if(ctx.operand_length == 1){
+        return(p_rom[reg.PC+1]);
+    } else if(ctx.operand_length == 2){
+        return(find_16_from_8(p_rom, reg.PC+1));
+    } else{
+        return(0);
+    }
+}
 
 int cpu::execute_opcode(){
-    uint16_t operand = 0;
-    printf("current program counter: 0x%04X\n", reg.PC);
-    uint8_t curr_opcode = p_rom[reg.PC];
-    printf("current opcode = 0x%02X\n", curr_opcode);
-    opcode ctx = opcodes[curr_opcode];
-    printf("which is instruction %s", ctx.str_name);
-
-    if(ctx.operand_length == 1){
-        operand = p_rom[reg.PC+1];
-        printf("(0x%02X)\n", operand);
-
-    }
-    else if(ctx.operand_length == 2){
-        operand = find_16_from_8(p_rom, reg.PC+1);
-        printf("(0x%04X)\n", operand);
-
-    }
-    else{
-        printf("\n");
-    }
+    opcode ctx = opcodes[p_rom[reg.PC]];
+    uint16_t operand = get_operand(ctx);
+    printf("PC: 0x%04X [0x%02X]:(%s) - {0x%04X}\n",reg.PC, p_rom[reg.PC], ctx.str_name, operand);
 
     if(ctx.opcode_pointer == NULL){
         printf("instruction not implemented :(\n");
+        return(-1);
     } else{
-        reg.PC_next = reg.PC + ctx.operand_length + 1;
-        ctx.opcode_pointer(operand, &reg, ram, ctx.reg_ind, ctx.reg_ind_two);
-        reg.PC_step();
+        NOP2(this);
+        // reg.PC_next = reg.PC + ctx.operand_length + 1;
+        // ctx.opcode_pointer(operand, &reg, ram, ctx.reg_ind, ctx.reg_ind_two);
+        // reg.PC_step();
         return 0;
     }
-    return -1;
 }
 
 void cpu::dump_registers(){
     printf("Register dump\n");
-    printf("A: 0x%02X F: 0x%02X\n", reg.A, reg.F.byte);
+    printf("A: 0x%02X F: 0x%02X ", reg.A, reg.F.byte);
     printf("B: 0x%02X C: 0x%02X\n", reg.B, reg.C);
-    printf("D: 0x%02X E: 0x%02X\n", reg.D, reg.E);
+    printf("D: 0x%02X E: 0x%02X ", reg.D, reg.E);
     printf("H: 0x%02X L: 0x%02X\n", reg.H, reg.L);
-    printf("PC: 0x%04X\n", reg.PC);
+    printf("PC: 0x%04X ", reg.PC);
     printf("SP: 0x%04X\n", reg.SP);
     printf("FLAGS:\n z; %d | n: %d | h: %d | cy: %d \n\n",
     reg.F.bits.z, reg.F.bits.n, reg.F.bits.h, reg.F.bits.cy);
