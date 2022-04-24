@@ -5,9 +5,13 @@
 #include <ram.hpp>
 #include "cpu.hpp"
 
+// sf::RenderWindow screen(sf::VideoMode(160*3,144*3));
+
+// void render_vram(uint8_t* p_vram){
+//     screen.clear(sf::Color::Black);
+
 
 int main(){
-
     FILE* rom_ptr;
     rom_ptr = fopen("../tetris.gb", "rb");
     if(rom_ptr == NULL){
@@ -63,13 +67,17 @@ int main(){
             int v_line;
             printf("Enter a new vline: ");
             scanf("%d", &v_line);
-            cpu.ram[0xFF44 - M_RAM_0] = (v_line & 0xFF);
+            cpu.ram.write8(0xFF44, v_line & 0xFF);
         }
         else if (C == 'i'){
             int address;
             printf("Enter a memory address to inspect: ");
             scanf("%X", &address);
-            printf("0x%02X\n", cpu.ram[address - M_RAM_0]);
+            printf("0x%02X\n", cpu.ram.read8(address));
+        }
+        else if (C == 'g'){
+            while(cpu.execute_opcode()>=0){}
+            cpu.dump_registers();
         }
 
     } while(cpu.execute_opcode() >= 0);

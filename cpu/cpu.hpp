@@ -10,6 +10,7 @@
 
 struct opcode;
 
+
 class cpu{
     public:
         RAM ram;

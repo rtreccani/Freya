@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <byteswap.h>
 
 void JUMP(uint16_t address, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
@@ -19,7 +20,7 @@ void LD_HL_DEC(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 }
 
 void LD_HL_INC(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->ram.write8(cpu->reg.read(IND_HL), cpu->reg.read(ind);
+    cpu->ram.write8(cpu->reg.read(IND_HL), cpu->reg.read(ind));
     cpu->reg.write(IND_HL, cpu->reg.read(IND_HL) + 1);
     cpu->ticks += 8;
 }
@@ -41,9 +42,9 @@ void XOR(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 
 void DEC(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_MEM_HL){
-        cpu->ram.write8(cpu->ram.read8(cpu->reg.read(IND_HL)) - 1);
-        cpu->reg.F.bits.z = (cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)] == 0) ? true : false;
-        cpu->reg.F.bits.h = ((cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)] & 0x0F) == 0x0F);
+        cpu->ram.dec(cpu->reg.read(IND_HL));
+        cpu->reg.F.bits.z = (cpu->ram.read8(cpu->reg.read(IND_HL)) == 0) ? true : false;
+        cpu->reg.F.bits.h = ((cpu->ram.read8(cpu->reg.read(IND_HL)) & 0x0F) == 0x0F);
         cpu->ticks += 12;
     } else if(ind == IND_BC || ind == IND_DE || ind == IND_HL || ind == IND_SP){
         cpu->reg.write(ind, cpu->reg.read(ind) - 1);
@@ -60,9 +61,9 @@ void DEC(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 
 void INC(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_MEM_HL){ //8 bit indirected
-        cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)]++;
-        cpu->reg.F.bits.z = (cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)] == 0) ? true : false;
-        cpu->reg.F.bits.h = ((cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)] & 0x0F) == 0x00);
+        cpu->ram.inc(cpu->reg.read(IND_HL));
+        cpu->reg.F.bits.z = (cpu->ram.read8(cpu->reg.read(IND_HL)) == 0) ? true : false;
+        cpu->reg.F.bits.h = ((cpu->ram.read8(cpu->reg.read(IND_HL)) & 0x0F) == 0x00);
         cpu->ticks += 12;
     } else if(ind == IND_BC || ind == IND_DE || ind == IND_HL || ind == IND_SP){ //16 bit direct
         cpu->reg.write(ind, cpu->reg.read(ind) + 1);
@@ -79,7 +80,7 @@ void INC(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 
 void LD16(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_NONE){
-        cpu->ram[operand - M_RAM_0] = cpu->reg.read(ind2);
+        cpu->ram.write8(operand, cpu->reg.read(ind2));
         cpu->ticks += 16;
     } else{
         cpu->reg.write(ind, operand);
@@ -89,10 +90,10 @@ void LD16(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 
 void LDA_8_IND(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_BC || ind == IND_DE || ind == IND_HL || ind == IND_SP){
-        cpu->reg.write(IND_A, cpu->ram[cpu->reg.read(ind) - M_RAM_0]);
+        cpu->reg.write(IND_A, cpu->ram.read8(cpu->reg.read(ind)));
         cpu->ticks += 8;
     } else if(ind == IND_NONE){
-        cpu->reg.write(IND_A, cpu->ram[operand- M_RAM_0]);
+        cpu->reg.write(IND_A, cpu->ram.read8(operand));
         cpu->ticks += 16;
     } else{
         cpu->reg.write(IND_A, cpu->reg.read(ind));
@@ -155,18 +156,39 @@ void SH_L(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 
 void OR(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_MEM_HL){
-        cpu->reg.write(IND_A, (cpu->ram[(cpu->reg.read(IND_HL)) - M_RAM_0] | cpu->reg.read(IND_A)));
+        cpu->reg.write(IND_A, (cpu->ram.read8(cpu->reg.read(IND_HL)) | cpu->reg.read(IND_A)));
         cpu->reg.F.bits.z = (cpu->reg.read(IND_A) == 0) ? true : false;
         cpu->ticks += 8;
+    } else if(ind == IND_NONE){
+        cpu->reg.write(IND_A, ((operand & 0xFF) | cpu->reg.read(IND_A)));
+        cpu->reg.F.bits.z = (cpu->reg.read(IND_A) == 0) ? true : false;
+        cpu->ticks += 8;
+    } else{
+        cpu->reg.write(IND_A, (cpu->reg.read(ind) | cpu->reg.read(IND_A)));
+        cpu->reg.F.bits.z = (cpu->reg.read(IND_A) == 0) ? true : false;
+        cpu->ticks += 4;
     }
-    cpu->reg.write(IND_A, (cpu->reg.read(ind) | cpu->reg.read(IND_A)));
+}
+
+void AND(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    if(ind == IND_MEM_HL){
+        cpu->reg.write(IND_A, (cpu->ram.read8(cpu->reg.read(IND_HL)) & cpu->reg.read(IND_A)));
+        cpu->reg.F.bits.z = (cpu->reg.read(IND_A) == 0) ? true : false;
+        cpu->ticks += 8;
+    } else if(ind == IND_NONE){
+        cpu->reg.write(IND_A, ((operand & 0xFF) & cpu->reg.read(IND_A)));
+        cpu->reg.F.bits.z = (cpu->reg.read(IND_A) == 0) ? true : false;
+        cpu->ticks += 8;
+    } else{
+    cpu->reg.write(IND_A, (cpu->reg.read(ind) & cpu->reg.read(IND_A)));
     cpu->reg.F.bits.z = (cpu->reg.read(IND_A) == 0) ? true : false;
     cpu->ticks += 4;
+    }
 }
 
 void LDMV(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_MEM_HL){
-        cpu->ram[cpu->reg.read(IND_HL) - M_RAM_0] = cpu->reg.read(ind2);
+        cpu->ram.write8(cpu->reg.read(IND_HL), cpu->reg.read(ind2));
         cpu->ticks += 8;
     }
     else{
@@ -177,29 +199,29 @@ void LDMV(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 
 void LDDIR(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_NONE){
-        cpu->reg.write(ind2, cpu->ram[(0xFF00 + (operand & 0xFF)) - M_RAM_0]);
+        cpu->reg.write(ind2, cpu->ram.read8(0xFF00 + (operand & 0xFF)));
         cpu->ticks += 12;
     } else if(ind2 == IND_NONE){
-        cpu->ram[(0xFF00 + (operand & 0xFF)) - M_RAM_0] = cpu->reg.read(ind);
+        cpu->ram.write8(0xFF00 + (operand & 0xFF), cpu->reg.read(ind));
         cpu->ticks += 12;
     }
     else{
-        cpu->ram[(0xFF00 + cpu->reg.read(ind)) - M_RAM_0] = cpu->reg.read(ind2);
+        cpu->ram.write8(0xFF00 + cpu->reg.read(ind), cpu->reg.read(ind2));
         cpu->ticks + 8;
     }
 }
 
 void LD_DIR_16(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->ram[cpu->reg.read(ind) - M_RAM_0] = cpu->reg.read(ind2);
+    cpu->ram.write8(cpu->reg.read(ind), cpu->reg.read(ind2));
     cpu->ticks += 8;
 }
 
 void CP(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_MEM_HL){
-        uint8_t tmp = cpu->reg.read(IND_A) - cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)];
+        uint8_t tmp = cpu->reg.read(IND_A) - cpu->ram.read8(cpu->reg.read(IND_HL));
         cpu->reg.F.bits.z = (tmp == 0) ? true : false;
         cpu->reg.F.bits.h = (tmp & 0x0F) == 0x0F;
-        cpu->reg.F.bits.cy = (cpu->reg.read(IND_A) < cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)]) ? true : false;
+        cpu->reg.F.bits.cy = (cpu->reg.read(IND_A) < cpu->ram.read8(cpu->reg.read(IND_HL))) ? true : false;
         cpu->ticks += 8;
     } else if(ind == IND_NONE) {
         uint8_t tmp = cpu->reg.read(IND_A) - (operand & 0xFF);
@@ -226,8 +248,8 @@ void ADD16(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 
 void ADC8(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_MEM_HL){
-        cpu->reg.write(IND_A, (cpu->reg.read(IND_A) + cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)] + cpu->reg.F.bits.cy));
-        cpu->reg.F.bits.cy = (cpu->reg.read(IND_A) > UINT16_MAX - cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)]) ? true : false;
+        cpu->reg.write(IND_A, (cpu->reg.read(IND_A) + cpu->ram.read8(cpu->reg.read(IND_HL)) + cpu->reg.F.bits.cy));
+        cpu->reg.F.bits.cy = (cpu->reg.read(IND_A) > UINT16_MAX - cpu->ram.read8(cpu->reg.read(IND_HL))) ? true : false;
         cpu->ticks += 8;
     } else{
         cpu->reg.write(IND_A, (cpu->reg.read(IND_A) + cpu->reg.read(ind) + cpu->reg.F.bits.cy));
@@ -241,8 +263,8 @@ void ADC8(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 
 void ADD8(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_MEM_HL){
-        cpu->reg.write(IND_A, (cpu->reg.read(IND_A) + cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)]));
-        cpu->reg.F.bits.cy = (cpu->reg.read(IND_A) > UINT16_MAX - cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)]) ? true : false;
+        cpu->reg.write(IND_A, (cpu->reg.read(IND_A) + cpu->ram.read8(cpu->reg.read(IND_HL))));
+        cpu->reg.F.bits.cy = (cpu->reg.read(IND_A) > UINT16_MAX - cpu->ram.read8(cpu->reg.read(IND_HL))) ? true : false;
         cpu->ticks += 8;
     } else{
         cpu->reg.write(IND_A, (cpu->reg.read(IND_A) + cpu->reg.read(ind)));
@@ -255,8 +277,8 @@ void ADD8(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 
 void SUB8(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_MEM_HL){
-        cpu->reg.write(IND_A, (cpu->reg.read(IND_A) - cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)]));
-        cpu->reg.F.bits.cy = (cpu->reg.read(IND_A) > cpu->ram[(cpu->reg.read(IND_HL) - M_RAM_0)]) ? true : false;
+        cpu->reg.write(IND_A, (cpu->reg.read(IND_A) - cpu->ram.read8(cpu->reg.read(IND_HL))));
+        cpu->reg.F.bits.cy = (cpu->reg.read(IND_A) > cpu->ram.read8(cpu->reg.read(IND_HL))) ? true : false;
         cpu->ticks += 8; 
     } else{
         cpu->reg.write(IND_A, (cpu->reg.read(IND_A) - cpu->reg.read(ind)));
@@ -280,64 +302,64 @@ void EI(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 }
 
 void RST00(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->ram[cpu->reg.read(IND_SP) - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF);
-    cpu->ram[cpu->reg.read(IND_SP) + 1 - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF00) >> 8;
+    cpu->ram.write8(cpu->reg.read(IND_SP), (cpu->reg.read(IND_PC) & 0xFF));
+    cpu->ram.write8(cpu->reg.read(IND_SP) + 1, (cpu->reg.read(IND_PC) & 0xFF00) >> 8);
     cpu->reg.write(IND_SP, cpu->reg.read(IND_SP) - 2);
     cpu->reg.PC_next = 0x0000;
     cpu->ticks += 32;
 }
 
 void RST08(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->ram[cpu->reg.read(IND_SP) - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF);
-    cpu->ram[cpu->reg.read(IND_SP) + 1 - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF00) >> 8;
+    cpu->ram.write8(cpu->reg.read(IND_SP), (cpu->reg.read(IND_PC) & 0xFF));
+    cpu->ram.write8(cpu->reg.read(IND_SP) + 1, (cpu->reg.read(IND_PC) & 0xFF00) >> 8);
     cpu->reg.write(IND_SP, cpu->reg.read(IND_SP) - 2);
     cpu->reg.PC_next = 0x0008;
     cpu->ticks += 32;
 }
 
 void RST10(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->ram[cpu->reg.read(IND_SP) - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF);
-    cpu->ram[cpu->reg.read(IND_SP) + 1 - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF00) >> 8;
+    cpu->ram.write8(cpu->reg.read(IND_SP), (cpu->reg.read(IND_PC) & 0xFF));
+    cpu->ram.write8(cpu->reg.read(IND_SP) + 1, (cpu->reg.read(IND_PC) & 0xFF00) >> 8);
     cpu->reg.write(IND_SP, cpu->reg.read(IND_SP) - 2);
     cpu->reg.PC_next = 0x0010;
     cpu->ticks += 32;
 }
 
 void RST18(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->ram[cpu->reg.read(IND_SP) - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF);
-    cpu->ram[cpu->reg.read(IND_SP) + 1 - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF00) >> 8;
+    cpu->ram.write8(cpu->reg.read(IND_SP), (cpu->reg.read(IND_PC) & 0xFF));
+    cpu->ram.write8(cpu->reg.read(IND_SP) + 1, (cpu->reg.read(IND_PC) & 0xFF00) >> 8);
     cpu->reg.write(IND_SP, cpu->reg.read(IND_SP) - 2);
     cpu->reg.PC_next = 0x0018;
     cpu->ticks += 32;
 }
 
 void RST20(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->ram[cpu->reg.read(IND_SP) - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF);
-    cpu->ram[cpu->reg.read(IND_SP) + 1 - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF00) >> 8;
+    cpu->ram.write8(cpu->reg.read(IND_SP), (cpu->reg.read(IND_PC) & 0xFF));
+    cpu->ram.write8(cpu->reg.read(IND_SP) + 1, (cpu->reg.read(IND_PC) & 0xFF00) >> 8);
     cpu->reg.write(IND_SP, cpu->reg.read(IND_SP) - 2);
     cpu->reg.PC_next = 0x0020;
     cpu->ticks += 32;
 }
 
 void RST28(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->ram[cpu->reg.read(IND_SP) - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF);
-    cpu->ram[cpu->reg.read(IND_SP) + 1 - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF00) >> 8;
+    cpu->ram.write8(cpu->reg.read(IND_SP), (cpu->reg.read(IND_PC) & 0xFF));
+    cpu->ram.write8(cpu->reg.read(IND_SP) + 1, (cpu->reg.read(IND_PC) & 0xFF00) >> 8);
     cpu->reg.write(IND_SP, cpu->reg.read(IND_SP) - 2);
     cpu->reg.PC_next = 0x0028;
     cpu->ticks += 32;
 }
 
 void RST30(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->ram[cpu->reg.read(IND_SP) - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF);
-    cpu->ram[cpu->reg.read(IND_SP) + 1 - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF00) >> 8;
+    cpu->ram.write8(cpu->reg.read(IND_SP), (cpu->reg.read(IND_PC) & 0xFF));
+    cpu->ram.write8(cpu->reg.read(IND_SP) + 1, (cpu->reg.read(IND_PC) & 0xFF00) >> 8);
     cpu->reg.write(IND_SP, cpu->reg.read(IND_SP) - 2);
     cpu->reg.PC_next = 0x0030;
     cpu->ticks += 32;
 }
 
 void RST38(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->ram[cpu->reg.read(IND_SP) - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF);
-    cpu->ram[cpu->reg.read(IND_SP) + 1 - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF00) >> 8;
+    cpu->ram.write8(cpu->reg.read(IND_SP), (cpu->reg.read(IND_PC) & 0xFF));
+    cpu->ram.write8(cpu->reg.read(IND_SP) + 1, (cpu->reg.read(IND_PC) & 0xFF00) >> 8);
     cpu->reg.write(IND_SP, cpu->reg.read(IND_SP) - 2);
     cpu->reg.PC_next = 0x0038;
     cpu->ticks += 32;
@@ -345,20 +367,24 @@ void RST38(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 
 void CALL(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     cpu->reg.write(IND_PC, cpu->reg.read(IND_PC) + 3); //move PC 3 forward (next instruction)
-    cpu->ram[cpu->reg.read(IND_SP) - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF);
-    cpu->ram[cpu->reg.read(IND_SP) + 1 - M_RAM_0] = (cpu->reg.read(IND_PC) & 0xFF00) >> 8;
     cpu->reg.write(IND_SP, cpu->reg.read(IND_SP) - 2); //move SP forward
+    cpu->ram.write16(cpu->reg.read(IND_SP), cpu->reg.read(IND_PC));
     cpu->reg.PC_next = operand;
     cpu->ticks += 12;
 }
 
 void RET(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->reg.PC_next = cpu->ram[cpu->reg.read(IND_SP) - M_RAM_0];
-    cpu->reg.write(IND_SP, cpu->reg.read(IND_SP)-2);
+    cpu->reg.PC_next = cpu->ram.read16(cpu->reg.read(IND_SP));
+    cpu->reg.write(IND_SP, cpu->reg.read(IND_SP)+2);
     cpu->ticks += 8;
 }
 
 void NOP(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    cpu->ticks += 4;
+}
+
+void COMPL(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    cpu->reg.write(IND_A, ~cpu->reg.read(IND_A));
     cpu->ticks += 4;
 }
 
@@ -410,7 +436,7 @@ opcode opcodes[256] = {
     {"INC L",             0, IND_L         , IND_NONE  , INC},
     {"DEC L",             0, IND_L         , IND_NONE  , DEC},
     {"LD L,8b",           1, IND_L         , IND_NONE  , LD8},
-    {"CPL",               0, IND_L         , IND_NONE  , NULL},
+    {"CPL",               0, IND_A         , IND_NONE  , COMPL},
     {"JR NC,8b",          1, IND_NONE      , IND_NONE  , NULL}, //0x30
     {"LD SP,16b",         2, IND_SP        , IND_NONE  , LD16},
     {"LD HL-,A",          0, IND_A         , IND_NONE  , LD_HL_DEC},
@@ -523,14 +549,14 @@ opcode opcodes[256] = {
     {"SBC A,L",           0, IND_NONE      , IND_NONE  , NULL},
     {"SBC A,HL",          0, IND_NONE      , IND_NONE  , NULL},
     {"SBC A,A",           0, IND_NONE      , IND_NONE  , NULL},
-    {"AND B",             0, IND_NONE      , IND_NONE  , NULL}, //0xA0
-    {"AND C",             0, IND_NONE      , IND_NONE  , NULL},
-    {"AND D",             0, IND_NONE      , IND_NONE  , NULL},
-    {"AND E",             0, IND_NONE      , IND_NONE  , NULL},
-    {"AND H",             0, IND_NONE      , IND_NONE  , NULL},
-    {"AND L",             0, IND_NONE      , IND_NONE  , NULL},
-    {"AND HL",            0, IND_NONE      , IND_NONE  , NULL},
-    {"AND A",             0, IND_NONE      , IND_NONE  , NULL},
+    {"AND B",             0, IND_B         , IND_NONE  , AND}, //0xA0
+    {"AND C",             0, IND_C         , IND_NONE  , AND},
+    {"AND D",             0, IND_D         , IND_NONE  , AND},
+    {"AND E",             0, IND_E         , IND_NONE  , AND},
+    {"AND H",             0, IND_H         , IND_NONE  , AND},
+    {"AND L",             0, IND_L         , IND_NONE  , AND},
+    {"AND HL",            0, IND_MEM_HL    , IND_NONE  , AND},
+    {"AND A",             0, IND_A         , IND_NONE  , AND},
     {"XOR B",             0, IND_B         , IND_NONE  , XOR},
     {"XOR C",             0, IND_C         , IND_NONE  , XOR},
     {"XOR D",             0, IND_D         , IND_NONE  , XOR},
@@ -593,7 +619,7 @@ opcode opcodes[256] = {
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"PUSH HL",           0, IND_NONE      , IND_NONE  , NULL},
-    {"AND 8b",            1, IND_NONE      , IND_NONE  , NULL},
+    {"AND 8b",            1, IND_NONE      , IND_NONE  , AND},
     {"RST 20h",           0, IND_NONE      , IND_NONE  , RST20},
     {"ADD SP, 8b",        1, IND_NONE      , IND_NONE  , NULL},
     {"JP (HL)",           0, IND_NONE      , IND_NONE  , NULL},
@@ -614,7 +640,7 @@ opcode opcodes[256] = {
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
-    {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
+    {"EI",                0, IND_NONE      , IND_NONE  , EI},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"CP 8b",             1, IND_NONE      , IND_NONE  , CP  },
@@ -622,10 +648,10 @@ opcode opcodes[256] = {
 };
 
 cpu::cpu(uint8_t* p_rom_input){
-    p_rom = p_rom_input;
+    ram.copy_cartridge(p_rom_input);
     reg.PC = 0;
     ticks = 0;
-    ram.set_interrupt_backend(&interrupts);
+    ram.set_interrupt_backend(&inter);
 }
 
 uint16_t find_16_from_8(uint8_t* array, int ptr){
@@ -639,19 +665,19 @@ uint16_t find_16_from_8(uint8_t* array, int ptr){
 
 uint16_t cpu::get_operand(opcode ctx){
     if(ctx.operand_length == 1){
-        return(p_rom[reg.PC+1]);
+        return(ram.read8(reg.read(IND_PC)+1));
     } else if(ctx.operand_length == 2){
-        return(find_16_from_8(p_rom, reg.PC+1));
+        return(ram.read16(reg.read(IND_PC)+1));
     } else{
         return(0);
     }
 }
 
 int cpu::execute_opcode(){
-    opcode ctx = opcodes[p_rom[reg.PC]];
+    opcode ctx = opcodes[ram.read8(reg.read(IND_PC))];
     uint16_t operand = get_operand(ctx);
     printf("Ticks: %d\n", (int)ticks);
-    printf("PC: 0x%04X [0x%02X]:(%s) - {0x%04X}\n",reg.PC, p_rom[reg.PC], ctx.str_name, operand);
+    printf("PC: 0x%04X [0x%02X]:(%s) - {0x%04X}\n",reg.PC, ram.read8(reg.read(IND_PC)), ctx.str_name, operand);
 
     if(ctx.opcode_pointer == NULL){
         printf("instruction not implemented :(\n");
@@ -671,7 +697,7 @@ void cpu::dump_registers(){
     printf("D: 0x%02X E: 0x%02X ", reg.D, reg.E);
     printf("H: 0x%02X L: 0x%02X\n", reg.H, reg.L);
     printf("PC: 0x%04X ", reg.PC);
-    printf("SP: 0x%04X\n", reg.SP);
+    printf("SP: 0x%04X, pointing at 0x%04X\n", reg.SP, ram.read16(reg.SP));
     printf("FLAGS:\n z; %d | n: %d | h: %d | cy: %d \n\n",
     reg.F.bits.z, reg.F.bits.n, reg.F.bits.h, reg.F.bits.cy);
 }
