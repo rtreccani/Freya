@@ -2,22 +2,19 @@
 #define CPU_H
 
 #include <registers.hpp>
+#include <interrupts.hpp>
+#include <ram.hpp>
 #include <stddef.h>
 
-#define MEM_RAM_START 0xC000
+#define M_RAM_0 0xC000
 
-struct opcode{
-    const char* str_name;
-    int operand_length;
-    reg_ind_t reg_ind;
-    reg_ind_t reg_ind_two;
-    void(* opcode_pointer)(uint16_t, registers*, uint8_t*, reg_ind_t, reg_ind_t);
-};
+struct opcode;
 
 class cpu{
     public:
-        uint8_t ram[8192];
+        RAM ram;
         registers reg;
+        interrupts inter;
         uint8_t* p_rom;
         cpu(uint8_t*);
         int execute_opcode();
@@ -25,6 +22,14 @@ class cpu{
         void dump_registers();
         uint16_t get_operand(opcode);
         uint64_t ticks;
+};
+
+struct opcode{
+    const char* str_name;
+    int operand_length;
+    reg_ind_t reg_ind;
+    reg_ind_t reg_ind_two;
+    void(* opcode_pointer)(uint16_t, cpu*, reg_ind_t, reg_ind_t);
 };
 
 

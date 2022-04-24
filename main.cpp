@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <SFML/Graphics.hpp>
 #include "registers.hpp"
+#include <interrupts.hpp>
+#include <ram.hpp>
 #include "cpu.hpp"
 
 
@@ -61,13 +63,13 @@ int main(){
             int v_line;
             printf("Enter a new vline: ");
             scanf("%d", &v_line);
-            cpu.ram[0xFF44 - MEM_RAM_START] = (v_line & 0xFF);
+            cpu.ram[0xFF44 - M_RAM_0] = (v_line & 0xFF);
         }
         else if (C == 'i'){
             int address;
             printf("Enter a memory address to inspect: ");
             scanf("%X", &address);
-            printf("0x%02X\n", cpu.ram[address - MEM_RAM_START]);
+            printf("0x%02X\n", cpu.ram[address - M_RAM_0]);
         }
 
     } while(cpu.execute_opcode() >= 0);
