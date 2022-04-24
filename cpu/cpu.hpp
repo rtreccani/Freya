@@ -13,11 +13,13 @@ struct opcode;
 
 class cpu{
     public:
+        void open_file(const char*);
+        void dump_stack();
         RAM ram;
         registers reg;
         interrupts inter;
         uint8_t* p_rom;
-        cpu(uint8_t*);
+        cpu();
         int execute_opcode();
         int execute_aux_opcode();
         void jump(int);

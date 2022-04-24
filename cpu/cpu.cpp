@@ -814,8 +814,7 @@ opcode aux_opcodes[256] = {
 
 };
 
-cpu::cpu(uint8_t* p_rom_input){
-    ram.copy_cartridge(p_rom_input);
+cpu::cpu(){
     reg.PC = 0;
     ticks = 0;
     ram.set_interrupt_backend(&inter);
@@ -892,4 +891,30 @@ void cpu::dump_registers(){
     printf("SP: 0x%04X, pointing at 0x%04X\n", reg.SP, ram.read16(reg.SP));
     printf("FLAGS:\n z; %d | n: %d | h: %d | cy: %d \n\n",
     reg.F.bits.z, reg.F.bits.n, reg.F.bits.h, reg.F.bits.cy);
+}
+
+void cpu::open_file(const char* f_addr){
+    FILE* rom_ptr;
+    rom_ptr = fopen(f_addr, "rb");
+    if(rom_ptr == NULL){
+        printf("file not opened :(\n");
+        exit(-1);
+    }
+    fseek(rom_ptr, 0, SEEK_END);
+    int rom_size = ftell(rom_ptr);
+    printf("rom size: %d\n", rom_size);
+    fseek(rom_ptr, 0, SEEK_SET);
+
+    uint8_t* rom = (uint8_t*)malloc(rom_size);
+    fread(rom, 1, rom_size, rom_ptr);
+    // printf("first few bytes %X, %X, %X\n", rom[0], rom[1], rom[2]);
+    ram.copy_cartridge(rom);
+    fclose(rom_ptr);
+}
+
+void cpu::dump_stack(){
+    printf("~~ Stack pointer: 0x%04X ~~\n", reg.SP);
+    for(int sp_t = 0xcfff; sp_t >= reg.SP; sp_t-=2){
+        printf("0x%04X: 0X%04X\n", sp_t, ram.read16(sp_t));
+    }
 }
