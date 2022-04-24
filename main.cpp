@@ -23,6 +23,7 @@ int main(){
                 int watchpoint;
                 printf("enter a watchpoint: ");
                 scanf("%X", &watchpoint);
+                printf("\n");
                 while(cpu.reg.PC != watchpoint){
                     if(cpu.execute_opcode() < 0){
                         cpu.dump_registers();

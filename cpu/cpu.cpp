@@ -115,7 +115,6 @@ void LD8(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 void JRNZ(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(!cpu->reg.F.bits.z){
         cpu->reg.PC_next = cpu->reg.PC + (int8_t)((operand & 0xFF) + 2); //cast to signed int for hopefully subtraction
-    printf("Jumping by %d bytes!\n", (int8_t)((operand & 0xFF) + 2));
     }
     cpu->ticks += 8;
 }
@@ -848,7 +847,7 @@ int cpu::execute_opcode(){
     opcode ctx = opcodes[ram.read8(reg.read(IND_PC))];
     uint16_t operand = get_operand(ctx);
     // printf("Ticks: %d\n", (int)ticks);
-    printf("PC: 0x%04X [0x%02X]:(%s) - {0x%04X}",reg.PC, ram.read8(reg.read(IND_PC)), ctx.str_name, operand);
+    printf("PC: 0x%04X [0x%02X]:(%s) - {0x%04X}\n",reg.PC, ram.read8(reg.read(IND_PC)), ctx.str_name, operand);
 
     
     if(ctx.opcode_pointer == NULL){
@@ -867,7 +866,7 @@ int cpu::execute_aux_opcode(){
     uint16_t operand = get_operand(aux_ctx);
     // printf("Aux\n");
     // printf("Ticks: %d\n", (int)ticks);
-    printf("PC: 0x%04X aux[0x%02X]:(%s) - {0x%04X}",reg.PC, ram.read8(reg.read(IND_PC)), aux_ctx.str_name, operand);
+    printf("PC: 0x%04X aux[0x%02X]:(%s) - {0x%04X}\n",reg.PC, ram.read8(reg.read(IND_PC)), aux_ctx.str_name, operand);
 
     
     if(aux_ctx.opcode_pointer == NULL){
