@@ -27,6 +27,7 @@ typedef enum{
     IND_F,
     IND_H,
     IND_L,
+    IND_AF,
     IND_BC,
     IND_DE,
     IND_HL,

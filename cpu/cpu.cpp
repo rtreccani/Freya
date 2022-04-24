@@ -9,8 +9,13 @@
 #include <byteswap.h>
 
 void JUMP(uint16_t address, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->reg.write(IND_PC_NEXT, address);
-    cpu->ticks += 12;
+    if(ind == IND_MEM_HL){
+        cpu->reg.write(IND_PC_NEXT, cpu->reg.read(IND_HL));
+        cpu->ticks += 4;
+    } else{
+        cpu->reg.write(IND_PC_NEXT, address);
+        cpu->ticks += 12;
+    }
 }
 
 void LD_HL_DEC(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
@@ -128,27 +133,83 @@ void JPNZ(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     cpu->ticks += 8;
 }
 
+//rotate through the carry flag 
 void RR(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    uint8_t carry_old = cpu->reg.F.bits.cy;
-    cpu->reg.F.bits.cy = (cpu->reg.read(ind) & 0x01);
-    cpu->reg.write(ind, (cpu->reg.read(ind) >> 1) ^ carry_old << 8);
+    if(ind == IND_MEM_HL){
+        uint8_t carry_old = cpu->reg.F.bits.cy;
+        cpu->reg.F.bits.cy = (cpu->ram.read8((cpu->reg.read(IND_HL))) & 0x01);
+        cpu->ram.write8(cpu->reg.read(IND_HL), (cpu->ram.read8((cpu->reg.read(IND_HL)))  >> 1) ^ carry_old << 8);
+        cpu->ticks += 16;
+    }
+    else{
+        uint8_t carry_old = cpu->reg.F.bits.cy;
+        cpu->reg.F.bits.cy = (cpu->reg.read(ind) & 0x01);
+        cpu->reg.write(ind, (cpu->reg.read(ind) >> 1) ^ carry_old << 8);
+        cpu->ticks += 8;
+    }
+}
+
+//rotate right, move old bit 0 to carry flag as well
+void RRC(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    if(ind == IND_MEM_HL){
+        cpu->reg.F.bits.cy = (cpu->ram.read8(cpu->reg.read(IND_HL)) & 0x01);
+        cpu->ram.write8(cpu->reg.read(IND_HL), (cpu->ram.read8(cpu->reg.read(IND_HL)) >> 1) ^ cpu->reg.F.bits.cy  << 8);
+        cpu->ticks += 16;
+    }
+    cpu->reg.F.bits.cy = (cpu->reg.read(ind) & 0x80);
+    cpu->reg.write(ind, (cpu->reg.read(ind) >> 1) ^ cpu->reg.F.bits.cy << 8);
     cpu->ticks += 8;
+}
+
+void SRA(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    if(ind == IND_MEM_HL){
+        uint8_t old_MSB = cpu->ram.read8(cpu->reg.read(IND_HL)) & 0x80;
+        uint8_t old_LSB = cpu->ram.read8(cpu->reg.read(IND_HL)) & 0x01;
+        cpu->reg.F.bits.cy = old_LSB;
+        cpu->ram.write8(cpu->reg.read(IND_HL), (cpu->ram.read8(cpu->reg.read(IND_HL)) >> 1) ^ old_MSB << 8);
+    }
+    else{
+        uint8_t old_MSB = cpu->ram.read8(cpu->reg.read(ind)) & 0x80;
+        uint8_t old_LSB = cpu->ram.read8(cpu->reg.read(ind)) & 0x01;
+        cpu->reg.F.bits.cy = old_LSB;
+        cpu->reg.write(ind, (cpu->reg.read(ind) >> 1) ^ old_MSB << 8);
+    }
+}
+
+void SRL(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    if(ind == IND_MEM_HL){
+        uint8_t old_LSB = cpu->ram.read8(cpu->reg.read(ind)) & 0x01;
+        cpu->reg.F.bits.cy = old_LSB;
+        cpu->ram.write8(cpu->reg.read(IND_HL), (cpu->ram.read8(cpu->reg.read(IND_HL)) >> 1) ^ 0 << 8);
+    }
+    else{
+        uint8_t old_LSB = cpu->ram.read8(cpu->reg.read(ind)) & 0x01;
+        cpu->reg.F.bits.cy = old_LSB;
+        cpu->reg.write(ind, (cpu->reg.read(ind) >> 1) ^ 0 << 8);
+    }
 }
 
 void RL(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    uint8_t carry_old = cpu->reg.F.bits.cy;
-    cpu->reg.F.bits.cy = (cpu->reg.read(ind) & 0x80);
-    cpu->reg.write(ind, (cpu->reg.read(ind) << 1) ^ carry_old >> 8);
-    cpu->ticks += 8;
+    if(ind == IND_MEM_HL){
+        uint8_t carry_old = cpu->reg.F.bits.cy;
+        cpu->reg.F.bits.cy = (cpu->ram.read8((cpu->reg.read(IND_HL))) & 0x80);
+        cpu->reg.write(ind, (cpu->ram.read8((cpu->reg.read(IND_HL)))  << 1) ^ carry_old >> 8);
+        cpu->ticks += 16;
+    }
+    else{
+        uint8_t carry_old = cpu->reg.F.bits.cy;
+        cpu->reg.F.bits.cy = (cpu->reg.read(ind) & 0x80);
+        cpu->reg.write(ind, (cpu->reg.read(ind) << 1) ^ carry_old >> 8);
+        cpu->ticks += 8;
+    }
 }
 
-void SH_R(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->reg.F.bits.cy = (cpu->reg.read(ind) & 0x01);
-    cpu->reg.write(ind, (cpu->reg.read(ind) >> 1));
-    cpu->ticks += 4;
-}
-
-void SH_L(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+void RLC(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    if(ind == IND_MEM_HL){
+        cpu->reg.F.bits.cy = (cpu->ram.read8(cpu->reg.read(IND_HL)) & 0x80);
+        cpu->reg.write(ind, (cpu->ram.read8(cpu->reg.read(IND_HL)) << 1));
+        cpu->ticks += 8;
+    }
     cpu->reg.F.bits.cy = (cpu->reg.read(ind) & 0x80);
     cpu->reg.write(ind, (cpu->reg.read(ind) << 1));
     cpu->ticks += 4;
@@ -388,6 +449,30 @@ void COMPL(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     cpu->ticks += 4;
 }
 
+void SWAP(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    if(ind == IND_MEM_HL){
+
+    } else{
+        uint8_t old = cpu->reg.read(ind);
+        uint8_t blah = (old & 0xF0)>>4 + (old & 0x0F)<<4;
+        cpu->reg.write(ind, blah);
+    }
+    cpu->ticks += 8;
+}
+
+void POP(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    cpu->reg.write(ind, cpu->ram.read16(cpu->reg.read(IND_SP)));
+    cpu->reg.write(IND_SP, cpu->reg.read(IND_SP)+2);
+    cpu->ticks += 12;
+}
+
+void PUSH(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    cpu->reg.write(IND_SP, cpu->reg.read(IND_SP) - 2);
+    cpu->ram.write16(cpu->reg.read(IND_SP), cpu->reg.read(ind));
+    cpu->ticks += 20;
+}
+
+
 opcode opcodes[256] = {
     {"NOP",               0, IND_NONE      , IND_NONE  , NOP}, //0x00
     {"LD BC,16b",         2, IND_BC        , IND_NONE  , LD16},
@@ -396,7 +481,7 @@ opcode opcodes[256] = {
     {"INC B",             0, IND_B         , IND_NONE  , INC},
     {"DEC B",             0, IND_B         , IND_NONE  , DEC},
     {"LD B,8b",           1, IND_B         , IND_NONE  , LD8 },
-    {"RLCA",              0, IND_A         , IND_NONE  , SH_L},
+    {"RLCA",              0, IND_A         , IND_NONE  , RLC},
     {"LD SP,16b",         2, IND_SP        , IND_NONE  , LD16},
     {"ADD HL,BC",         0, IND_HL        , IND_BC    , ADD16},
     {"LD A,(BC)",         0, IND_NONE      , IND_NONE  , NULL},
@@ -404,7 +489,7 @@ opcode opcodes[256] = {
     {"INC C",             0, IND_C         , IND_NONE  , INC},
     {"DEC C",             0, IND_C         , IND_NONE  , DEC},
     {"LD C,8b",           1, IND_C         , IND_NONE  , LD8},
-    {"RRCA",              0, IND_A         , IND_NONE  , SH_L},
+    {"RRCA",              0, IND_A         , IND_NONE  , RRC},
     {"STOP 0",            1, IND_NONE      , IND_NONE  , NULL}, //0x10
     {"LD DE,16b",         2, IND_DE        , IND_NONE  , LD16},
     {"LD DE, A",          0, IND_NONE      , IND_NONE  , NULL},
@@ -582,11 +667,11 @@ opcode opcodes[256] = {
     {"CP HL",             0, IND_MEM_HL    , IND_NONE  , CP},
     {"CP A",              0, IND_A         , IND_NONE  , CP},
     {"RET NZ",            0, IND_NONE      , IND_NONE  , NULL}, //0xC0
-    {"POP BC",            0, IND_NONE      , IND_NONE  , NULL},
+    {"POP BC",            0, IND_BC        , IND_NONE  , POP},
     {"JP NZ,16b",         2, IND_NONE      , IND_NONE  , NULL},
     {"JP 16b",            2, IND_NONE      , IND_NONE  , JUMP},
     {"CALL NZ,16b",       2, IND_NONE      , IND_NONE  , NULL},
-    {"PUSH BC",           0, IND_NONE      , IND_NONE  , NULL},
+    {"PUSH BC",           0, IND_BC        , IND_NONE  , PUSH},
     {"ADD A,8b",          1, IND_NONE      , IND_NONE  , NULL},
     {"RST 00",            0, IND_NONE      , IND_NONE  , RST00},
     {"RET Z",             0, IND_NONE      , IND_NONE  , NULL},
@@ -598,11 +683,11 @@ opcode opcodes[256] = {
     {"ADC A,8b",          0, IND_NONE      , IND_NONE  , NULL},
     {"RST 08",            0, IND_NONE      , IND_NONE  , RST08},
     {"RET NC",            0, IND_NONE      , IND_NONE  , NULL}, //0xD0
-    {"POP DE",            0, IND_NONE      , IND_NONE  , NULL},
+    {"POP DE",            0, IND_DE        , IND_NONE  , POP},
     {"JP NZ,16b",         2, IND_NONE      , IND_NONE  , JPNZ},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"CALL NC,16b",       2, IND_NONE      , IND_NONE  , NULL},
-    {"PUSH DE",           0, IND_DE        , IND_NONE  , NULL},
+    {"PUSH DE",           0, IND_DE        , IND_NONE  , PUSH},
     {"SUB ?????,8b",      1, IND_NONE      , IND_NONE  , NULL},
     {"RST 10h",           0, IND_NONE      , IND_NONE  , RST10},
     {"RET C",             0, IND_NONE      , IND_NONE  , NULL},
@@ -614,15 +699,15 @@ opcode opcodes[256] = {
     {"SBC A,8b",          1, IND_NONE      , IND_NONE  , NULL},
     {"RST 18h",           0, IND_NONE      , IND_NONE  , RST18},
     {"LDH 8b, A",         1, IND_A         , IND_NONE  , LDDIR}, //0xE0
-    {"POP HL",            0, IND_A         , IND_NONE  , NULL},
+    {"POP HL",            0, IND_HL        , IND_NONE  , POP},
     {"LD (C), A",         0, IND_C         , IND_A     , LDDIR},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
-    {"PUSH HL",           0, IND_NONE      , IND_NONE  , NULL},
+    {"PUSH HL",           0, IND_HL        , IND_NONE  , PUSH},
     {"AND 8b",            1, IND_NONE      , IND_NONE  , AND},
     {"RST 20h",           0, IND_NONE      , IND_NONE  , RST20},
     {"ADD SP, 8b",        1, IND_NONE      , IND_NONE  , NULL},
-    {"JP (HL)",           0, IND_NONE      , IND_NONE  , NULL},
+    {"JP (HL)",           0, IND_MEM_HL    , IND_NONE  , JUMP},
     {"LD 16b, A",         2, IND_NONE      , IND_A     , LD16},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
@@ -630,11 +715,11 @@ opcode opcodes[256] = {
     {"XOR 8b",            1, IND_NONE      , IND_NONE  , NULL},
     {"RST 28h",           0, IND_NONE      , IND_NONE  , RST28},
     {"LDH A,(8b)",        1, IND_NONE      , IND_A     , LDDIR}, //0xF0
-    {"POP AF",            0, IND_NONE      , IND_NONE  , NULL},
+    {"POP AF",            0, IND_AF        , IND_NONE  , POP},
     {"LD A,(C)",          1, IND_NONE      , IND_NONE  , NULL},
     {"DI",                0, IND_NONE      , IND_NONE  , DI},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
-    {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
+    {"PUSH AF",           0, IND_AF        , IND_NONE  , PUSH},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
@@ -645,6 +730,66 @@ opcode opcodes[256] = {
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"CP 8b",             1, IND_NONE      , IND_NONE  , CP  },
     {"RST 38h",           0, IND_NONE      , IND_NONE  , RST38},
+};
+
+opcode aux_opcodes[256] = {
+    {"RLC B",             0, IND_B         , IND_NONE  , RLC}, //0x00
+    {"RLC C",             0, IND_C         , IND_NONE  , RLC},
+    {"RLC D",             0, IND_D         , IND_NONE  , RLC},
+    {"RLC E",             0, IND_E         , IND_NONE  , RLC},
+    {"RLC H",             0, IND_H         , IND_NONE  , RLC},
+    {"RLC L",             0, IND_L         , IND_NONE  , RLC},
+    {"RLC (HL)",          0, IND_MEM_HL    , IND_NONE  , RLC},
+    {"RLC A",             0, IND_A         , IND_NONE  , RLC},
+    {"RRC B",             0, IND_B         , IND_NONE  , RRC},
+    {"RRC C",             0, IND_C         , IND_NONE  , RRC},
+    {"RRC D",             0, IND_D         , IND_NONE  , RRC},
+    {"RRC E",             0, IND_E         , IND_NONE  , RRC},
+    {"RRC H",             0, IND_H         , IND_NONE  , RRC},
+    {"RRC L",             0, IND_L         , IND_NONE  , RRC},
+    {"RRC (HL)",          0, IND_MEM_HL    , IND_NONE  , RRC},
+    {"RRC A",             0, IND_A         , IND_NONE  , RRC},
+    {"RL B",              0, IND_B         , IND_NONE   , RL}, //0x10
+    {"RL C",              0, IND_C         , IND_NONE   , RL},
+    {"RL D",              0, IND_D         , IND_NONE   , RL},
+    {"RL E",              0, IND_E         , IND_NONE   , RL},
+    {"RL H",              0, IND_H         , IND_NONE   , RL},
+    {"RL L",              0, IND_L         , IND_NONE   , RL},
+    {"RL (HL)",           0, IND_MEM_HL    , IND_NONE   , RL},
+    {"RL A",              0, IND_A         , IND_NONE   , RL},
+    {"RR B",              0, IND_B         , IND_NONE   , RR},
+    {"RR C",              0, IND_C         , IND_NONE   , RR},
+    {"RR D",              0, IND_D         , IND_NONE   , RR},
+    {"RR E",              0, IND_E         , IND_NONE   , RR},
+    {"RR H",              0, IND_H         , IND_NONE   , RR},
+    {"RR L",              0, IND_L         , IND_NONE   , RR},
+    {"RR (HL)",           0, IND_MEM_HL    , IND_NONE   , RR},
+    {"RR A",              0, IND_A         , IND_NONE   , RR},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL}, //0x20
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL}, //0x30
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"NOT IMPL",          0, IND_NONE      , IND_NONE   , NULL},
+    {"SWAP A",            0, IND_A         , IND_NONE   , SWAP},
+
 };
 
 cpu::cpu(uint8_t* p_rom_input){
@@ -673,18 +818,52 @@ uint16_t cpu::get_operand(opcode ctx){
     }
 }
 
+// uint16_t cpu::get_aux_operand(opcode ctx){
+//     if(ctx.operand_length == 1){
+//         return(ram.read8(reg.read(IND_PC)+2));
+//     } else if(ctx.operand_length == 2){
+//         return(ram.read16(reg.read(IND_PC)+2));
+//     } else{
+//         return(0);
+//     }
+// }
+
 int cpu::execute_opcode(){
+    if(ram.read8(reg.read(IND_PC)) == 0xCB){
+        reg.write(IND_PC, reg.read(IND_PC)+1);
+        return(execute_aux_opcode());
+    }
     opcode ctx = opcodes[ram.read8(reg.read(IND_PC))];
     uint16_t operand = get_operand(ctx);
     printf("Ticks: %d\n", (int)ticks);
     printf("PC: 0x%04X [0x%02X]:(%s) - {0x%04X}\n",reg.PC, ram.read8(reg.read(IND_PC)), ctx.str_name, operand);
 
+    
     if(ctx.opcode_pointer == NULL){
         printf("instruction not implemented :(\n");
         return(-1);
     } else{
         reg.PC_next = reg.PC + ctx.operand_length + 1;
         ctx.opcode_pointer(operand,this, ctx.reg_ind, ctx.reg_ind_two);
+        reg.PC_step();
+        return 0;
+    }
+}
+
+int cpu::execute_aux_opcode(){
+    opcode aux_ctx = aux_opcodes[ram.read8(reg.read(IND_PC))];
+    uint16_t operand = get_operand(aux_ctx);
+    printf("Aux\n");
+    printf("Ticks: %d\n", (int)ticks);
+    printf("PC: 0x%04X [0x%02X]:(%s) - {0x%04X}\n",reg.PC, ram.read8(reg.read(IND_PC)), aux_ctx.str_name, operand);
+
+    
+    if(aux_ctx.opcode_pointer == NULL){
+        printf("AUX instruction not implemented :(\n");
+        return(-1);
+    } else{
+        reg.PC_next = reg.PC + aux_ctx.operand_length + 1;
+        aux_ctx.opcode_pointer(operand,this, aux_ctx.reg_ind, aux_ctx.reg_ind_two);
         reg.PC_step();
         return 0;
     }

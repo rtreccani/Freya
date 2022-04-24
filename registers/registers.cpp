@@ -26,6 +26,9 @@ void registers::write(reg_ind_t ind, uint16_t val){
             L = (val & 0xFF);
             break;
 // 16 bit writes
+        case IND_AF:
+            A = val & 0xFF00;
+            F.byte = val & 0x00FF;
         case IND_BC:
             BC = val;
             break;
@@ -65,6 +68,8 @@ uint16_t registers::read(reg_ind_t ind){
         case IND_L:
             return(L & 0xFF);
 // 16 bit reads
+        case IND_AF:
+            return ((A << 8) + F.byte);
         case IND_BC:
             return(BC);
         case IND_DE:

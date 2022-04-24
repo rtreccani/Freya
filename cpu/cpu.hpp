@@ -19,9 +19,11 @@ class cpu{
         uint8_t* p_rom;
         cpu(uint8_t*);
         int execute_opcode();
+        int execute_aux_opcode();
         void jump(int);
         void dump_registers();
         uint16_t get_operand(opcode);
+        uint16_t get_aux_operand(opcode);
         uint64_t ticks;
 };
 
