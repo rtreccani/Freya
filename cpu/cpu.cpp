@@ -25,7 +25,8 @@ void LD_HL_DEC(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 }
 
 void LD_HL_INC(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    cpu->ram.write8(cpu->reg.read(IND_HL), cpu->reg.read(ind));
+    cpu->reg.write(IND_A, cpu->ram.read8(cpu->reg.read(IND_HL)));
+    // cpu->ram.write8(cpu->reg.read(IND_HL), cpu->reg.read(ind));
     cpu->reg.write(IND_HL, cpu->reg.read(IND_HL) + 1);
     cpu->ticks += 8;
 }
@@ -472,6 +473,27 @@ void PUSH(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     cpu->ticks += 20;
 }
 
+void RETNZ(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    if(~cpu->reg.F.bits.z){
+        cpu->reg.PC_next = cpu->ram.read16(cpu->reg.read(IND_SP));
+        cpu->reg.write(IND_SP, cpu->reg.read(IND_SP)+2);
+        cpu->ticks += 8;
+    }
+}
+
+void RETZ(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    if(cpu->reg.F.bits.z){
+        cpu->reg.PC_next = cpu->ram.read16(cpu->reg.read(IND_SP));
+        cpu->reg.write(IND_SP, cpu->reg.read(IND_SP)+2);
+        cpu->ticks += 8;
+    }
+}
+
+void JRN(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
+    cpu->reg.write(IND_PC_NEXT, cpu->reg.read(IND_PC) + (operand & 0xFF));
+    cpu->ticks += 8;
+}
+
 
 opcode opcodes[256] = {
     {"NOP",               0, IND_NONE      , IND_NONE  , NOP}, //0x00
@@ -666,15 +688,15 @@ opcode opcodes[256] = {
     {"CP L",              0, IND_L         , IND_NONE  , CP},
     {"CP HL",             0, IND_MEM_HL    , IND_NONE  , CP},
     {"CP A",              0, IND_A         , IND_NONE  , CP},
-    {"RET NZ",            0, IND_NONE      , IND_NONE  , NULL}, //0xC0
+    {"RET NZ",            0, IND_NONE      , IND_NONE  , RETNZ}, //0xC0
     {"POP BC",            0, IND_BC        , IND_NONE  , POP},
-    {"JP NZ,16b",         2, IND_NONE      , IND_NONE  , NULL},
+    {"JP NZ,16b",         2, IND_NONE      , IND_NONE  , JPNZ},
     {"JP 16b",            2, IND_NONE      , IND_NONE  , JUMP},
     {"CALL NZ,16b",       2, IND_NONE      , IND_NONE  , NULL},
     {"PUSH BC",           0, IND_BC        , IND_NONE  , PUSH},
     {"ADD A,8b",          1, IND_NONE      , IND_NONE  , NULL},
     {"RST 00",            0, IND_NONE      , IND_NONE  , RST00},
-    {"RET Z",             0, IND_NONE      , IND_NONE  , NULL},
+    {"RET Z",             0, IND_NONE      , IND_NONE  , RETZ},
     {"RET",               0, IND_NONE      , IND_NONE  , RET},
     {"JP Z,16b",          0, IND_NONE      , IND_NONE  , NULL},
     {"PREFIX CB",         0, IND_NONE      , IND_NONE  , NULL},
@@ -684,7 +706,7 @@ opcode opcodes[256] = {
     {"RST 08",            0, IND_NONE      , IND_NONE  , RST08},
     {"RET NC",            0, IND_NONE      , IND_NONE  , NULL}, //0xD0
     {"POP DE",            0, IND_DE        , IND_NONE  , POP},
-    {"JP NZ,16b",         2, IND_NONE      , IND_NONE  , JPNZ},
+    {"JP NC,16b",         2, IND_NONE      , IND_NONE  , JPNZ},
     {"NULL INSTR",        0, IND_NONE      , IND_NONE  , NULL},
     {"CALL NC,16b",       2, IND_NONE      , IND_NONE  , NULL},
     {"PUSH DE",           0, IND_DE        , IND_NONE  , PUSH},
