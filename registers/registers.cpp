@@ -17,7 +17,7 @@ void registers::write(reg_ind_t ind, uint16_t val){
             D = (val & 0xFF);
             break;
         case IND_E:
-            A = (val & 0xFF);
+            E = (val & 0xFF);
             break;
         case IND_H:
             H = (val & 0xFF);
