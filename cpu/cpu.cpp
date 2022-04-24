@@ -840,15 +840,6 @@ uint16_t cpu::get_operand(opcode ctx){
     }
 }
 
-// uint16_t cpu::get_aux_operand(opcode ctx){
-//     if(ctx.operand_length == 1){
-//         return(ram.read8(reg.read(IND_PC)+2));
-//     } else if(ctx.operand_length == 2){
-//         return(ram.read16(reg.read(IND_PC)+2));
-//     } else{
-//         return(0);
-//     }
-// }
 
 int cpu::execute_opcode(){
     if(ram.read8(reg.read(IND_PC)) == 0xCB){
@@ -857,8 +848,8 @@ int cpu::execute_opcode(){
     }
     opcode ctx = opcodes[ram.read8(reg.read(IND_PC))];
     uint16_t operand = get_operand(ctx);
-    printf("Ticks: %d\n", (int)ticks);
-    printf("PC: 0x%04X [0x%02X]:(%s) - {0x%04X}\n",reg.PC, ram.read8(reg.read(IND_PC)), ctx.str_name, operand);
+    // printf("Ticks: %d\n", (int)ticks);
+    printf("PC: 0x%04X [0x%02X]:(%s) - {0x%04X}",reg.PC, ram.read8(reg.read(IND_PC)), ctx.str_name, operand);
 
     
     if(ctx.opcode_pointer == NULL){
@@ -875,9 +866,9 @@ int cpu::execute_opcode(){
 int cpu::execute_aux_opcode(){
     opcode aux_ctx = aux_opcodes[ram.read8(reg.read(IND_PC))];
     uint16_t operand = get_operand(aux_ctx);
-    printf("Aux\n");
-    printf("Ticks: %d\n", (int)ticks);
-    printf("PC: 0x%04X [0x%02X]:(%s) - {0x%04X}\n",reg.PC, ram.read8(reg.read(IND_PC)), aux_ctx.str_name, operand);
+    // printf("Aux\n");
+    // printf("Ticks: %d\n", (int)ticks);
+    printf("PC: 0x%04X aux[0x%02X]:(%s) - {0x%04X}",reg.PC, ram.read8(reg.read(IND_PC)), aux_ctx.str_name, operand);
 
     
     if(aux_ctx.opcode_pointer == NULL){
