@@ -15,6 +15,8 @@ void interrupts::service(int ticks){
         last_vline_tick_count = ticks;
         if(current_vline == 153){
             current_vline = 0;
+            vsync_need_service = true;
+            
         } else{
             current_vline++;
         }

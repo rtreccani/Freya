@@ -47,6 +47,9 @@ void registers::write(reg_ind_t ind, uint16_t val){
         case IND_PC_NEXT:
             PC_next = val;
             break;
+        
+        default:
+            break;
     }
 }
 
@@ -83,6 +86,8 @@ uint16_t registers::read(reg_ind_t ind){
         case IND_PC_NEXT:
             return(PC_next);
         
+        default:
+            break;
     }
     return(0);
 }

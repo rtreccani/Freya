@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <byteswap.h>
+#include <renderer.hpp>
 
 void JUMP(uint16_t address, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     if(ind == IND_MEM_HL){
@@ -298,7 +299,7 @@ void LDDIR(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
     }
     else{
         cpu->ram.write8(0xFF00 + cpu->reg.read(ind), cpu->reg.read(ind2));
-        cpu->ticks + 8;
+        cpu->ticks += 8;
     }
 }
 
@@ -494,7 +495,7 @@ void SWAP(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 
     } else{
         uint8_t old = cpu->reg.read(ind);
-        uint8_t blah = (old & 0xF0)>>4 + (old & 0x0F)<<4;
+        uint8_t blah = ((old & 0xF0)>>4) + ((old & 0x0F)<<4);
         cpu->reg.write(ind, blah);
     }
     cpu->ticks += 8;
@@ -513,7 +514,7 @@ void PUSH(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
 }
 
 void RETNZ(uint16_t operand, cpu* cpu, reg_ind_t ind, reg_ind_t ind2){
-    if(~cpu->reg.F.bits.z){
+    if(!cpu->reg.F.bits.z){
         cpu->reg.PC_next = cpu->ram.read16(cpu->reg.read(IND_SP));
         cpu->reg.write(IND_SP, cpu->reg.read(IND_SP)+2);
         cpu->ticks += 8;
@@ -1007,6 +1008,7 @@ cpu::cpu(){
     reg.PC = 0;
     ticks = 0;
     inter.set_ram_ptr(&ram);
+    ren.set_ram(&ram);
 }
 
 uint16_t find_16_from_8(uint8_t* array, int ptr){
@@ -1031,6 +1033,10 @@ uint16_t cpu::get_operand(opcode ctx){
 
 int cpu::execute_opcode(){
     inter.service(ticks);
+    // if(inter.vsync_need_service){
+    //     inter.vsync_need_service = false;
+    //     ren.render_all_tiles();
+    // }
 
     if(ram.read8(reg.read(IND_PC)) == 0xCB){
         reg.write(IND_PC, reg.read(IND_PC)+1);

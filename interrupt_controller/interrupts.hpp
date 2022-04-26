@@ -23,13 +23,14 @@ typedef struct{
 
 class interrupts{
     public:
-
         void service(int ticks);
         RAM* ram;
         void set_ram_ptr(RAM*);
+         bool vsync_need_service = false;
     private:
         uint8_t current_vline = 0;
         int last_vline_tick_count = 0;
+
 };
 
 #endif

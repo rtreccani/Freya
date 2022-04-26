@@ -4,6 +4,7 @@
 #include <registers.hpp>
 #include <interrupts.hpp>
 #include <ram.hpp>
+#include <renderer.hpp>
 #include <stddef.h>
 
 #define M_RAM_0 0xC000
@@ -18,6 +19,7 @@ class cpu{
         RAM ram;
         registers reg;
         interrupts inter;
+        renderer ren;
         uint8_t* p_rom;
         cpu();
         int execute_opcode();
