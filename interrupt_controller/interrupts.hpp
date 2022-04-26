@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <registers.hpp>
+#include <ram.hpp>
 
 typedef enum{
     INT_VBLANK,
@@ -22,7 +23,13 @@ typedef struct{
 
 class interrupts{
     public:
-        bool IME;
+
+        void service(int ticks);
+        RAM* ram;
+        void set_ram_ptr(RAM*);
+    private:
+        uint8_t current_vline = 0;
+        int last_vline_tick_count = 0;
 };
 
 #endif

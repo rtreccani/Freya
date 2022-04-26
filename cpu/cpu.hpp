@@ -37,5 +37,4 @@ struct opcode{
     void(* opcode_pointer)(uint16_t, cpu*, reg_ind_t, reg_ind_t);
 };
 
-
 #endif /*CPU_H*/

@@ -1,7 +1,7 @@
 #ifndef RAM_H
 #define RAM_H
 
-#include <interrupts.hpp>
+#include <stdint.h>
 
 #define ROM_0_START  0x0000
 #define ROM_0_END    0x3FFF
@@ -63,7 +63,6 @@ typedef struct{
 
 class RAM{
     public:
-        void set_interrupt_backend(interrupts*);
         uint8_t read8(uint16_t);
         uint16_t read16(uint16_t); //for getting operands
         void write16(uint16_t, uint16_t); //for SP
@@ -73,17 +72,17 @@ class RAM{
         void add(uint16_t, uint8_t);
         void sub(uint16_t, uint8_t);
         void copy_cartridge(uint8_t *);
+        uint8_t VRAM_data[VRAM_END - VRAM_START];
     private:
         uint8_t ROM_0_data[ROM_0_END - ROM_0_START];
         uint8_t ROM_SW_data[ROM_SW_END - ROM_SW_START];
-        uint8_t VRAM_data[VRAM_END - VRAM_START];
+
         uint8_t RAM_SW_data[RAM_SW_END - RAM_SW_START];
         uint8_t RAM_0_data[RAM_0_END - RAM_0_START];
         uint8_t SPRITE_ATTR_data[SPRITE_ATTR_END - SPRITE_ATTR_START];
         uint8_t IO_data[IO_END - IO_START];
         uint8_t INTERNAL_RAM_2_data[INTERNAL_RAM_2_END - INTERNAL_RAM_2_START];
         uint8_t INTERRUPT_EN_data;
-        interrupts* backend;
 };
 
 #endif

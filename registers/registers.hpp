@@ -34,6 +34,8 @@ typedef enum{
     IND_SP,
     IND_PC,
     IND_MEM_HL,
+    IND_MEM_DE,
+    IND_MEM_BC,
     IND_PC_NEXT,
     IND_NONE,
 } reg_ind_t;

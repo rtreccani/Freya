@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 ram_map_t map_to_section(uint16_t native_address){
     ram_map_t ret;
     if(native_address <= ROM_0_END){
@@ -61,10 +60,6 @@ ram_map_t map_to_section(uint16_t native_address){
     return(ret);
 }
 
-void RAM::set_interrupt_backend(interrupts* p_backend){
-    backend = p_backend;
-}
-
 uint8_t RAM::read8(uint16_t native_address){
     ram_map_t map = map_to_section(native_address);
     switch(map.section){
@@ -75,7 +70,7 @@ uint8_t RAM::read8(uint16_t native_address){
             return(ROM_SW_data[map.address]);
             break;
         case VRAM:
-            printf("read from VRAM @0x%04X\n", native_address);
+            // printf("read from VRAM @0x%04X\n", native_address);
             return(VRAM_data[map.address]);
             break;
         case RAM_SW:
@@ -123,7 +118,7 @@ void RAM::write8(uint16_t native_address, uint8_t val){
     ram_map_t map = map_to_section(native_address);
     switch(map.section){
         case VRAM:
-            printf("write to VRAM @0x%04X\n", native_address);
+            // printf("write to VRAM @0x%04X\n", native_address);
             VRAM_data[map.address] = val;
             break;
         case RAM_SW:
