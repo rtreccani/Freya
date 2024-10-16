@@ -54,6 +54,13 @@ typedef enum {
 } ram_section_t;
 
 typedef struct{
+    uint16_t native_address;
+    const char* friendly_name;
+    void(* p_special_function_write)(uint16_t, uint8_t);
+    void(* p_special_function_read)(uint16_t, uint8_t);
+} special_memory_t;
+
+typedef struct{
     ram_section_t section;
     uint16_t address;
 } ram_map_t;
@@ -74,6 +81,7 @@ class RAM{
         void copy_cartridge(uint8_t *);
         uint8_t VRAM_data[VRAM_END - VRAM_START];
     private:
+        uint8_t read8_internal(uint16_t);
         uint8_t ROM_0_data[ROM_0_END - ROM_0_START];
         uint8_t ROM_SW_data[ROM_SW_END - ROM_SW_START];
 
@@ -83,6 +91,9 @@ class RAM{
         uint8_t IO_data[IO_END - IO_START];
         uint8_t INTERNAL_RAM_2_data[INTERNAL_RAM_2_END - INTERNAL_RAM_2_START];
         uint8_t INTERRUPT_EN_data;
+        void check_for_special_read(uint16_t native_address);
+        void check_for_special_write(uint16_t native_address, uint8_t value);
+
 };
 
 #endif

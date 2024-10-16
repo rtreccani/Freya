@@ -60,7 +60,55 @@ ram_map_t map_to_section(uint16_t native_address){
     return(ret);
 }
 
-uint8_t RAM::read8(uint16_t native_address){
+special_memory_t special_addresses[] = {
+    {0xFF41, "LCDC Status Reg",                                 NULL, NULL},
+    {0xFF42, "LCD Scroll Y",                                    NULL, NULL},
+    {0xFF43, "LCD Scroll X",                                    NULL, NULL},
+    {0xFFFF, "Interrupt Enable",                                NULL, NULL},
+    {0x2000, "Memory Bank Controller (Unused)",                 NULL, NULL},
+    {0xFF00, "Joypad",                                          NULL, NULL},
+    {0xFF01, "Serial Transfer Data",                            NULL, NULL},
+    {0xFF02, "Serial Transfer Control",                         NULL, NULL},
+    {0xFF04, "Divider Register",                                NULL, NULL},
+    {0xFF05, "Timer Counter",                                   NULL, NULL},
+    {0xFF06, "Timer Modulo",                                    NULL, NULL},
+    {0xFF07, "Timer Control",                                   NULL, NULL},
+    {0xFF0F, "Interrupt Flags",                                 NULL, NULL},
+    {0xFF10, "Channel 1 Sweep Register",                        NULL, NULL},
+    {0xFF11, "Channel 1 Sound Length/Wave Pattern Duty",        NULL, NULL},
+};
+
+void RAM::check_for_special_write(uint16_t native_address, uint8_t value)
+{
+    for(size_t i = 0; i < (sizeof(special_addresses)/sizeof(special_addresses[0])); i++)
+    {
+        if(native_address == special_addresses[i].native_address)
+        {
+            printf("writing 0x%02X to 0x%04X which is %s\n", value, native_address, special_addresses[i].friendly_name);
+            return;
+        }
+    }
+}
+
+void RAM::check_for_special_read(uint16_t native_address)
+{
+    for(size_t i = 0; i < (sizeof(special_addresses)/sizeof(special_addresses[0])); i++)
+    {
+        if(native_address == special_addresses[i].native_address)
+        {
+            printf("reading 0x%02X from 0x%04X which is %s\n", read8_internal(native_address), native_address, special_addresses[i].friendly_name);
+            return;
+        }
+    }
+}
+
+uint8_t RAM::read8(uint16_t native_address)
+{
+    check_for_special_read(native_address);
+    return read8_internal(native_address);
+}
+
+uint8_t RAM::read8_internal(uint16_t native_address){
     ram_map_t map = map_to_section(native_address);
     switch(map.section){
         case ROM_0:
@@ -96,6 +144,7 @@ uint8_t RAM::read8(uint16_t native_address){
             break;
         default:
             printf("attempted read from non-valid section @0x%04X\n", native_address);
+            fflush(stdout);
             return(0);
     }
 }
@@ -115,6 +164,7 @@ void RAM::write16(uint16_t native_address, uint16_t value){
 }
 
 void RAM::write8(uint16_t native_address, uint8_t val){
+    check_for_special_write(native_address, val);
     ram_map_t map = map_to_section(native_address);
     switch(map.section){
         case VRAM:
