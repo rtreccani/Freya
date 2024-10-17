@@ -68,32 +68,28 @@ typedef struct{
 #define M_RAM_S 0xC000
 #define M_RAM_END 0xFFFF
 
-class RAM{
-    public:
-        uint8_t read8(uint16_t);
-        uint16_t read16(uint16_t); //for getting operands
-        void write16(uint16_t, uint16_t); //for SP
-        void write8(uint16_t, uint8_t);
-        void inc(uint16_t);
-        void dec(uint16_t);
-        void add(uint16_t, uint8_t);
-        void sub(uint16_t, uint8_t);
-        void copy_cartridge(uint8_t *);
-        uint8_t VRAM_data[VRAM_END - VRAM_START];
-    private:
-        uint8_t read8_internal(uint16_t);
-        uint8_t ROM_0_data[ROM_0_END - ROM_0_START];
-        uint8_t ROM_SW_data[ROM_SW_END - ROM_SW_START];
+uint8_t ram_read8(uint16_t);
+uint16_t ram_read16(uint16_t); //for getting operands
+void ram_write16(uint16_t, uint16_t); //for SP
+void ram_write8(uint16_t, uint8_t);
+void ram_inc(uint16_t);
+void ram_dec(uint16_t);
+void ram_add(uint16_t, uint8_t);
+void ram_sub(uint16_t, uint8_t);
+void ram_copy_cartridge(uint8_t *);
 
-        uint8_t RAM_SW_data[RAM_SW_END - RAM_SW_START];
-        uint8_t RAM_0_data[RAM_0_END - RAM_0_START];
-        uint8_t SPRITE_ATTR_data[SPRITE_ATTR_END - SPRITE_ATTR_START];
-        uint8_t IO_data[IO_END - IO_START];
-        uint8_t INTERNAL_RAM_2_data[INTERNAL_RAM_2_END - INTERNAL_RAM_2_START];
-        uint8_t INTERRUPT_EN_data;
-        void check_for_special_read(uint16_t native_address);
-        void check_for_special_write(uint16_t native_address, uint8_t value);
 
-};
+typedef struct{
+    uint8_t VRAM_data[VRAM_END - VRAM_START];
+    uint8_t ROM_0_data[ROM_0_END - ROM_0_START];
+    uint8_t ROM_SW_data[ROM_SW_END - ROM_SW_START];
+
+    uint8_t RAM_SW_data[RAM_SW_END - RAM_SW_START];
+    uint8_t RAM_0_data[RAM_0_END - RAM_0_START];
+    uint8_t SPRITE_ATTR_data[SPRITE_ATTR_END - SPRITE_ATTR_START];
+    uint8_t IO_data[IO_END - IO_START];
+    uint8_t INTERNAL_RAM_2_data[INTERNAL_RAM_2_END - INTERNAL_RAM_2_START];
+    uint8_t INTERRUPT_EN_data;
+} ram_t;
 
 #endif

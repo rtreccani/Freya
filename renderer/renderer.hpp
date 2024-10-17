@@ -6,20 +6,18 @@
 #include <stdio.h>
 
 
+void renderer_init();
+static void renderer_render_tile(int, int, int);
+void renderer_render_all_tiles();
+void renderer_blank();
+void renderer_render_screen();
 
-class renderer{
+
+typedef struct{
     public:
         SDL_Window* win;
         SDL_Renderer* ren;
-        RAM* p_ram;
-        renderer();
-        void set_ram(RAM*);
-        void render_tile(int, int, int);
-        void render_all_tiles();
-        void blank();
-        void render_screen();
         int scale = 2;
-};
-
+} renderer_t;
 
 #endif

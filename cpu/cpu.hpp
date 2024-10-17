@@ -7,29 +7,23 @@
 #include <renderer.hpp>
 #include <stddef.h>
 
-#define M_RAM_0 0xC000
-
 struct opcode;
 
 
-class cpu{
-    public:
-        void open_file(const char*);
-        void dump_stack();
-        RAM ram;
-        registers reg;
-        interrupts inter;
-        renderer ren;
-        uint8_t* p_rom;
-        cpu();
-        int execute_opcode();
-        int execute_aux_opcode();
-        void jump(int);
-        void dump_registers();
-        uint16_t get_operand(opcode);
-        uint16_t get_aux_operand(opcode);
-        uint64_t ticks;
-};
+void cpu_open_file(const char*);
+void cpu_dump_stack();
+void cpu_init();
+int cpu_execute_opcode();
+static int cpu_execute_aux_opcode();
+void jump(int);
+void dump_registers();
+uint16_t cpu_get_operand(opcode);
+uint16_t cpu_get_aux_operand(opcode);
+
+
+typedef struct{
+    uint64_t ticks;
+} cpu_t;
 
 struct opcode{
     const char* str_name;

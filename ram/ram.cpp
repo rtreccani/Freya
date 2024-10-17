@@ -3,6 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+static uint8_t ram_read8_internal(uint16_t);
+static void ram_check_for_special_read(uint16_t native_address);
+static void ram_check_for_special_write(uint16_t native_address, uint8_t value);
+
+ram_t ram;
+
 ram_map_t map_to_section(uint16_t native_address){
     ram_map_t ret;
     if(native_address <= ROM_0_END){
@@ -78,7 +84,7 @@ special_memory_t special_addresses[] = {
     {0xFF11, "Channel 1 Sound Length/Wave Pattern Duty",        NULL, NULL},
 };
 
-void RAM::check_for_special_write(uint16_t native_address, uint8_t value)
+static void ram_check_for_special_write(uint16_t native_address, uint8_t value)
 {
     for(size_t i = 0; i < (sizeof(special_addresses)/sizeof(special_addresses[0])); i++)
     {
@@ -90,57 +96,57 @@ void RAM::check_for_special_write(uint16_t native_address, uint8_t value)
     }
 }
 
-void RAM::check_for_special_read(uint16_t native_address)
+static void ram_check_for_special_read(uint16_t native_address)
 {
     for(size_t i = 0; i < (sizeof(special_addresses)/sizeof(special_addresses[0])); i++)
     {
         if(native_address == special_addresses[i].native_address)
         {
-            printf("reading 0x%02X from 0x%04X which is %s\n", read8_internal(native_address), native_address, special_addresses[i].friendly_name);
+            printf("reading 0x%02X from 0x%04X which is %s\n", ram_read8_internal(native_address), native_address, special_addresses[i].friendly_name);
             return;
         }
     }
 }
 
-uint8_t RAM::read8(uint16_t native_address)
+uint8_t ram_read8(uint16_t native_address)
 {
-    check_for_special_read(native_address);
-    return read8_internal(native_address);
+    ram_check_for_special_read(native_address);
+    return ram_read8_internal(native_address);
 }
 
-uint8_t RAM::read8_internal(uint16_t native_address){
+static uint8_t ram_read8_internal(uint16_t native_address){
     ram_map_t map = map_to_section(native_address);
     switch(map.section){
         case ROM_0:
-            return(ROM_0_data[map.address]);
+            return(ram.ROM_0_data[map.address]);
             break;
         case ROM_SW:
-            return(ROM_SW_data[map.address]);
+            return(ram.ROM_SW_data[map.address]);
             break;
         case VRAM:
             // printf("read from VRAM @0x%04X\n", native_address);
-            return(VRAM_data[map.address]);
+            return(ram.VRAM_data[map.address]);
             break;
         case RAM_SW:
-            return(RAM_SW_data[map.address]);
+            return(ram.RAM_SW_data[map.address]);
             break;
         case RAM_0:
-            return(RAM_0_data[map.address]);
+            return(ram.RAM_0_data[map.address]);
             break;
         case RAM_0_ECHO:
-            return(RAM_0_data[map.address]);
+            return(ram.RAM_0_data[map.address]);
             break;
         case SPRITE_ATTR:
-            return(SPRITE_ATTR_data[map.address]);
+            return(ram.SPRITE_ATTR_data[map.address]);
             break;
         case IO:
-            return(IO_data[map.address]);
+            return(ram.IO_data[map.address]);
             break;
         case INTERNAL_RAM_2:
-            return(INTERNAL_RAM_2_data[map.address]);
+            return(ram.INTERNAL_RAM_2_data[map.address]);
             break;
         case INTERRUPT_EN:
-            return(INTERRUPT_EN_data);
+            return(ram.INTERRUPT_EN_data);
             break;
         default:
             printf("attempted read from non-valid section @0x%04X\n", native_address);
@@ -149,171 +155,171 @@ uint8_t RAM::read8_internal(uint16_t native_address){
     }
 }
 
-uint16_t RAM::read16(uint16_t native_address){
+uint16_t ram_read16(uint16_t native_address){
     uint16_t result = 0x0000;
-    result += (read8(native_address));
-    result += (read8(native_address+1) << 8);
+    result += (ram_read8(native_address));
+    result += (ram_read8(native_address+1) << 8);
     return result;
     printf("16 bit read of 0x%04X, result 0x%04X\n",native_address, result);
 }
 
-void RAM::write16(uint16_t native_address, uint16_t value){
+void ram_write16(uint16_t native_address, uint16_t value){
     printf("16 bit write of 0x%04X to 0x%04X\n", value, native_address);
-    write8(native_address, value & 0xFF);
-    write8(native_address+1, value>>8 & 0xFF);
+    ram_write8(native_address, value & 0xFF);
+    ram_write8(native_address+1, value>>8 & 0xFF);
 }
 
-void RAM::write8(uint16_t native_address, uint8_t val){
-    check_for_special_write(native_address, val);
+void ram_write8(uint16_t native_address, uint8_t val){
+    ram_check_for_special_write(native_address, val);
     ram_map_t map = map_to_section(native_address);
     switch(map.section){
         case VRAM:
             // printf("write to VRAM @0x%04X\n", native_address);
-            VRAM_data[map.address] = val;
+            ram.VRAM_data[map.address] = val;
             break;
         case RAM_SW:
-            RAM_SW_data[map.address] = val;
+            ram.RAM_SW_data[map.address] = val;
             break;
         case RAM_0:
-            RAM_0_data[map.address] = val;
+            ram.RAM_0_data[map.address] = val;
             break;
         case RAM_0_ECHO:
-            RAM_0_data[map.address] = val;
+            ram.RAM_0_data[map.address] = val;
             break;
         case SPRITE_ATTR:
-            SPRITE_ATTR_data[map.address] = val;
+            ram.SPRITE_ATTR_data[map.address] = val;
             break;
         case IO:
-            IO_data[map.address] = val;
+            ram.IO_data[map.address] = val;
             break;
         case INTERNAL_RAM_2:
-            INTERNAL_RAM_2_data[map.address] = val;
+            ram.INTERNAL_RAM_2_data[map.address] = val;
             break;
         case INTERRUPT_EN:
-            INTERRUPT_EN_data = val;
+            ram.INTERRUPT_EN_data = val;
             break;
         default:
             printf("attempted write to non-valid section @0x%04X\n", native_address);
     }
 }
 
-void RAM::inc(uint16_t native_address){
+void ram_inc(uint16_t native_address){
     ram_map_t map = map_to_section(native_address);
     switch(map.section){
         case VRAM:
-            VRAM_data[map.address]++;
+            ram.VRAM_data[map.address]++;
             break;
         case RAM_SW:
-            RAM_SW_data[map.address]++;
+            ram.RAM_SW_data[map.address]++;
             break;
         case RAM_0:
-            RAM_0_data[map.address]++;
+            ram.RAM_0_data[map.address]++;
             break;
         case SPRITE_ATTR:
-            SPRITE_ATTR_data[map.address]++;
+            ram.SPRITE_ATTR_data[map.address]++;
             break;
         case IO:
-            IO_data[map.address]++;
+            ram.IO_data[map.address]++;
             break;
         case INTERNAL_RAM_2:
-            INTERNAL_RAM_2_data[map.address]++;
+            ram.INTERNAL_RAM_2_data[map.address]++;
             break;
         case INTERRUPT_EN:
-            INTERRUPT_EN_data++;
+            ram.INTERRUPT_EN_data++;
             break;
         default:
             printf("attempted add to non-valid section @0x%04X\n", native_address);
     }
 }
 
-void RAM::dec(uint16_t native_address){
+void ram_dec(uint16_t native_address){
     ram_map_t map = map_to_section(native_address);
     switch(map.section){
         case VRAM:
-            VRAM_data[map.address]--;
+            ram.VRAM_data[map.address]--;
             break;
         case RAM_SW:
-            RAM_SW_data[map.address]--;
+            ram.RAM_SW_data[map.address]--;
             break;
         case RAM_0:
-            RAM_0_data[map.address]--;
+            ram.RAM_0_data[map.address]--;
             break;
         case SPRITE_ATTR:
-            SPRITE_ATTR_data[map.address]--;
+            ram.SPRITE_ATTR_data[map.address]--;
             break;
         case IO:
-            IO_data[map.address]--;
+            ram.IO_data[map.address]--;
             break;
         case INTERNAL_RAM_2:
-            INTERNAL_RAM_2_data[map.address]--;
+            ram.INTERNAL_RAM_2_data[map.address]--;
             break;
         case INTERRUPT_EN:
-            INTERRUPT_EN_data--;
+            ram.INTERRUPT_EN_data--;
             break;
         default:
             printf("attempted add to non-valid section @0x%04X\n", native_address);
     }
 }
 
-void RAM::add(uint16_t native_address, uint8_t val){
+void ram_add(uint16_t native_address, uint8_t val){
     ram_map_t map = map_to_section(native_address);
     switch(map.section){
         case VRAM:
-            VRAM_data[map.address] += val;
+            ram.VRAM_data[map.address] += val;
             break;
         case RAM_SW:
-            RAM_SW_data[map.address] += val;
+            ram.RAM_SW_data[map.address] += val;
             break;
         case RAM_0:
-            RAM_0_data[map.address] += val;
+            ram.RAM_0_data[map.address] += val;
             break;
         case SPRITE_ATTR:
-            SPRITE_ATTR_data[map.address] += val;
+            ram.SPRITE_ATTR_data[map.address] += val;
             break;
         case IO:
-            IO_data[map.address] += val;
+            ram.IO_data[map.address] += val;
             break;
         case INTERNAL_RAM_2:
-            INTERNAL_RAM_2_data[map.address] += val;
+            ram.INTERNAL_RAM_2_data[map.address] += val;
             break;
         case INTERRUPT_EN:
-            INTERRUPT_EN_data += val;
+            ram.INTERRUPT_EN_data += val;
             break;
         default:
             printf("attempted add to non-valid section @0x%04X\n", native_address);
     }
 }
 
-void RAM::sub(uint16_t native_address, uint8_t val){
+void ram_sub(uint16_t native_address, uint8_t val){
     ram_map_t map = map_to_section(native_address);
     switch(map.section){
         case VRAM:
-            VRAM_data[map.address] -= val;
+            ram.VRAM_data[map.address] -= val;
             break;
         case RAM_SW:
-            RAM_SW_data[map.address] -= val;
+            ram.RAM_SW_data[map.address] -= val;
             break;
         case RAM_0:
-            RAM_0_data[map.address] -= val;
+            ram.RAM_0_data[map.address] -= val;
             break;
         case SPRITE_ATTR:
-            SPRITE_ATTR_data[map.address] -= val;
+            ram.SPRITE_ATTR_data[map.address] -= val;
             break;
         case IO:
-            IO_data[map.address] -= val;
+            ram.IO_data[map.address] -= val;
             break;
         case INTERNAL_RAM_2:
-            INTERNAL_RAM_2_data[map.address] -= val;
+            ram.INTERNAL_RAM_2_data[map.address] -= val;
             break;
         case INTERRUPT_EN:
-            INTERRUPT_EN_data -= val;
+            ram.INTERRUPT_EN_data -= val;
             break;
         default:
             printf("attempted add to non-valid section @0x%04X\n", native_address);
     }
 }
 
-void RAM::copy_cartridge(uint8_t* p_rom){
-    memcpy(&ROM_0_data, p_rom, ROM_0_END-ROM_0_START);
-    memcpy(&ROM_SW_data, p_rom + ROM_SW_START, ROM_SW_END - ROM_SW_START);
+void ram_copy_cartridge(uint8_t* p_rom){
+    memcpy(&ram.ROM_0_data, p_rom, ROM_0_END-ROM_0_START);
+    memcpy(&ram.ROM_SW_data, p_rom + ROM_SW_START, ROM_SW_END - ROM_SW_START);
 }

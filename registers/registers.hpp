@@ -40,7 +40,7 @@ typedef enum{
     IND_NONE,
 } reg_ind_t;
 
-class registers{
+typedef struct registers{
     public:
         uint8_t A;
         flag_reg_t F;
@@ -72,47 +72,13 @@ class registers{
         uint16_t PC;
         uint16_t SP;
 
-        uint16_t read(reg_ind_t);
-        void write(reg_ind_t, uint16_t);
-        void PC_step();
         uint16_t PC_next;
         bool interrupts_enabled;
         bool interrupts_disabled_request;
-};
-
-typedef struct{
-    uint8_t A;
-    flag_reg_t F;
-
-    union{
-        struct{
-            uint8_t C;
-            uint8_t B;
-        };
-        uint16_t BC;
-    };
-
-    union{
-        struct{
-            uint8_t E;
-            uint8_t D;
-        };
-        uint16_t DE;
-    };
-
-    union{
-        struct{
-            uint8_t L;
-            uint8_t H;
-        };
-        uint16_t HL;
-    };
-
-    uint16_t PC;
-    uint16_t SP;
 } registers_t;
 
-
-
+uint16_t reg_read(reg_ind_t);
+void reg_write(reg_ind_t, uint16_t);
+void reg_PC_step();
 
 #endif /* REGISTERS_HPP */
